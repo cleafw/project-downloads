@@ -1,0 +1,42 @@
+name: Upload NeuralNote MuScriptor v1 attachments
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: neuralnote-muscriptor-v1
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: neuralnote-muscriptor-v1
+      SOURCE: https://huggingface.co/DamRsn/muscriptor-gguf/resolve/d7045f94e8b19427f4ff9542975035e66596e51c/v1
+      META: projects/neuralnote/muscriptor-v1
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check release is a draft
+        run: test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true
+      - name: Download, verify and split pinned weights
+        run: |
+          mkdir -p artifacts/originals artifacts/release
+          while read -r digest name; do
+            curl --fail --location --retry 3 --retry-all-errors --connect-timeout 30 --max-time 900 \
+              "$SOURCE/$name?download=true&mirror=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "artifacts/originals/$name"
+            python3 tools/split_asset.py "artifacts/originals/$name" artifacts/release "$digest"
+          done < "$META/SHA256SUMS.txt"
+          (cd artifacts/release && sha256sum --check "../../$META/ASSET-SHA256SUMS.txt")
+      - name: Upload to draft and verify GitHub digests
+        run: |
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$TAG" artifacts/release/* "$META/NOTICE.md" "$META/SHA256SUMS.txt" "$META/ASSET-SHA256SUMS.txt" --clobber
+          gh release view "$TAG" --json assets --jq '.assets[] | select(.state == "uploaded") | [.name, .digest] | @tsv' > uploaded.tsv
+          while read -r digest name; do
+            grep -Fx "$(printf '%s\tsha256:%s' "$name" "$digest")" uploaded.tsv
+          done < "$META/ASSET-SHA256SUMS.txt"
