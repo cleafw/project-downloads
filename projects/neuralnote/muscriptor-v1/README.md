@@ -20,6 +20,8 @@ cat muscriptor-large-f16.gguf.part01 muscriptor-large-f16.gguf.part02 > muscript
 
 第一条在 Windows 命令提示符运行，第二条在 macOS/Linux 终端运行。核对最终文件的 [SHA-256](SHA256SUMS.txt)，再将完整 GGUF 放入对应模型的使用目录，保持原文件名。分片不是可加载的模型。
 
+在 NeuralNote v2.1.2 中，若把完整文件存到了自选文件夹，可以点该模型的「下载到…」，输入同一文件夹并确认；软件识别到对应文件后不会再下载。若 GitHub 也无法访问，这个备用地址无法解决网络问题。
+
 ## 来源和许可
 
 - 原模型：**MuScriptor**，由 **Mirelo 和 Kyutai** 制作。见 [原始权重](https://huggingface.co/MuScriptor)、[代码](https://github.com/muscriptor/muscriptor)。
